@@ -1,7 +1,7 @@
 package server
 
 import (
-	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -10,28 +10,31 @@ import (
 
 func SetupServer() {
 	metricsRoute()
-
+	log.Print("Serving on :8080")
 	http.ListenAndServe(":8080", nil)
 
 }
 
-type AllMetrics struct {
-	CpuMetrics    metrics.CPUMetric    `json:"cpuMetrics"`
-	MemoryMetrics metrics.MemoryMetric `json:"memMetrics"`
+type CollectedMetrics struct {
+	CpuMetrics    metrics.CPUMetric
+	MemoryMetrics metrics.MemoryMetric
+}
+
+func (c CollectedMetrics) String() string {
+	return fmt.Sprintf("%s%s",
+		c.CpuMetrics.String(),
+		c.MemoryMetrics.String())
 }
 
 func metricsRoute() {
 	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
 
-		allMetrics := AllMetrics{
+		cMetrics := CollectedMetrics{
 			CpuMetrics:    metrics.GetCPUMetrics(),
 			MemoryMetrics: metrics.GetMemoryMetrics(),
 		}
-		metricsJson, err := json.Marshal(allMetrics)
-		if err != nil {
-			log.Println(err)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(metricsJson))
+
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte(cMetrics.String()))
 	})
 }
